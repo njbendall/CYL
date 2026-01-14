@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CYL Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0c0f14;
+        --panel: #121826;
+        --panel-strong: #1b2234;
+        --text: #e6e9f2;
+        --muted: #93a4c2;
+        --accent: #4cc9f0;
+        --accent-2: #6fffe9;
+        --chip: #0f1420;
+        --border: rgba(255, 255, 255, 0.08);
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+        background: radial-gradient(circle at 20% 20%, #1b2438 0%, transparent 45%),
+          var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: minmax(320px, 420px) 1fr;
+        gap: 24px;
+        padding: 32px;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        background: linear-gradient(180deg, #141b2d 0%, #0e1320 100%);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .sidebar header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .sidebar h1 {
+        font-size: 22px;
+        margin: 0;
+      }
+
+      .status-pill {
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: rgba(79, 201, 240, 0.2);
+        color: var(--accent);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .summary {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 18px;
+        border: 1px solid var(--border);
+      }
+
+      .summary h2 {
+        font-size: 16px;
+        margin: 0 0 12px;
+        color: var(--muted);
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .metric {
+        padding: 14px;
+        background: var(--panel-strong);
+        border-radius: 14px;
+        border: 1px solid var(--border);
+      }
+
+      .metric span {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .metric strong {
+        font-size: 20px;
+      }
+
+      .rider-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .rider-card {
+        background: var(--panel);
+        border-radius: 16px;
+        padding: 14px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border: 1px solid var(--border);
+      }
+
+      .avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        display: grid;
+        place-items: center;
+        font-weight: 600;
+      }
+
+      .rider-info {
+        flex: 1;
+      }
+
+      .rider-info h3 {
+        margin: 0 0 4px;
+        font-size: 15px;
+      }
+
+      .rider-info p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .rider-stats {
+        text-align: right;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .rider-stats strong {
+        display: block;
+        color: var(--accent-2);
+        font-size: 14px;
+      }
+
+      .map-panel {
+        background: var(--panel);
+        border-radius: 24px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+      }
+
+      .map-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .map-header h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .map-header p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      #map {
+        height: 520px;
+        border-radius: 18px;
+        overflow: hidden;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        background: var(--panel-strong);
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+      }
+
+      label {
+        font-size: 12px;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--chip);
+        color: var(--text);
+      }
+
+      button {
+        background: linear-gradient(135deg, #4cc9f0, #4895ef);
+        border: none;
+        color: #08121f;
+        font-weight: 600;
+        padding: 12px 16px;
+        border-radius: 12px;
+        cursor: pointer;
+        align-self: end;
+      }
+
+      .point-list {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      @media (max-width: 1080px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        #map {
+          height: 420px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <header>
+          <div>
+            <h1>Cycle Ops</h1>
+            <p>ClaimYourLand live dashboard</p>
+          </div>
+          <div class="status-pill">Active</div>
+        </header>
+
+        <section class="summary">
+          <h2>Squad Snapshot</h2>
+          <div class="summary-grid">
+            <div class="metric">
+              <span>Cycle Pace</span>
+              <strong>28.4 km/h</strong>
+            </div>
+            <div class="metric">
+              <span>Distance</span>
+              <strong>126 km</strong>
+            </div>
+            <div class="metric">
+              <span>Duration</span>
+              <strong>4h 12m</strong>
+            </div>
+            <div class="metric">
+              <span>Territory</span>
+              <strong>36%</strong>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>Riders</h2>
+          <div class="rider-list">
+            <div class="rider-card">
+              <div class="avatar">AK</div>
+              <div class="rider-info">
+                <h3>Amelia Kwon</h3>
+                <p>Cycle pace 30.1 km/h</p>
+              </div>
+              <div class="rider-stats">
+                <strong>42 km</strong>
+                1h 26m
+              </div>
+            </div>
+            <div class="rider-card">
+              <div class="avatar">JT</div>
+              <div class="rider-info">
+                <h3>Jules Tan</h3>
+                <p>Cycle pace 27.8 km/h</p>
+              </div>
+              <div class="rider-stats">
+                <strong>38 km</strong>
+                1h 18m
+              </div>
+            </div>
+            <div class="rider-card">
+              <div class="avatar">SR</div>
+              <div class="rider-info">
+                <h3>Sage River</h3>
+                <p>Cycle pace 29.3 km/h</p>
+              </div>
+              <div class="rider-stats">
+                <strong>31 km</strong>
+                58m
+              </div>
+            </div>
+            <div class="rider-card">
+              <div class="avatar">MC</div>
+              <div class="rider-info">
+                <h3>Mason Cruz</h3>
+                <p>Cycle pace 26.4 km/h</p>
+              </div>
+              <div class="rider-stats">
+                <strong>15 km</strong>
+                30m
+              </div>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <main class="map-panel">
+        <div class="map-header">
+          <div>
+            <h2>Street View Live Map</h2>
+            <p>Plot coordinates to mark new cycling checkpoints.</p>
+          </div>
+          <div class="status-pill">Open Street Map</div>
+        </div>
+        <div id="map"></div>
+        <form class="controls" id="point-form">
+          <div>
+            <label for="latitude">Latitude</label>
+            <input id="latitude" type="number" step="0.0001" placeholder="37.7749" required />
+          </div>
+          <div>
+            <label for="longitude">Longitude</label>
+            <input id="longitude" type="number" step="0.0001" placeholder="-122.4194" required />
+          </div>
+          <div>
+            <label for="label">Checkpoint label</label>
+            <input id="label" type="text" placeholder="Mission District" />
+          </div>
+          <button type="submit">Plot Point</button>
+        </form>
+        <div class="point-list" id="point-list">No plotted points yet.</div>
+      </main>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script>
+      const map = L.map("map", { zoomControl: false }).setView(
+        [37.7749, -122.4194],
+        12
+      );
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      }).addTo(map);
+
+      const pointForm = document.getElementById("point-form");
+      const pointList = document.getElementById("point-list");
+      const markers = [];
+
+      function renderPoints() {
+        if (markers.length === 0) {
+          pointList.textContent = "No plotted points yet.";
+          return;
+        }
+        pointList.innerHTML = markers
+          .map(
+            (marker, index) =>
+              `<strong>#${index + 1}</strong> ${marker.label} (${marker.lat.toFixed(
+                4
+              )}, ${marker.lng.toFixed(4)})`
+          )
+          .join(" · ");
+      }
+
+      pointForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const lat = Number(document.getElementById("latitude").value);
+        const lng = Number(document.getElementById("longitude").value);
+        const labelInput = document.getElementById("label").value.trim();
+
+        if (Number.isNaN(lat) || Number.isNaN(lng)) {
+          return;
+        }
+
+        const label = labelInput || "Custom checkpoint";
+        const marker = L.marker([lat, lng]).addTo(map).bindPopup(label);
+        marker.openPopup();
+        markers.push({ lat, lng, label, marker });
+        renderPoints();
+        map.setView([lat, lng], 13, { animate: true });
+        pointForm.reset();
+      });
+
+      renderPoints();
+    </script>
+  </body>
+</html>
